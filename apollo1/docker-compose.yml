@@ -1,0 +1,46 @@
+version: "3"
+
+services:
+  apollo-configservice:
+    container_name: apollo-configservice
+    image: apolloconfig/apollo-configservice:2.3.0
+    restart: always
+    network_mode: "host"
+    volumes:
+      - "./logs/config-logs:/opt/logs"
+    environment:
+      - spring_datasource_url=jdbc:mysql://x.x.x.x:3326/apolloconfigdb?characterEncoding=utf8
+      - spring_datasource_username=user
+      - spring_datasource_password=pwd
+
+
+  apollo-adminservice:
+    container_name: apollo-adminservice
+    image: apolloconfig/apollo-adminservice:2.3.0
+    restart: always
+    network_mode: "host"
+    depends_on:
+      - apollo-configservice
+    volumes:
+      - "./logs/admin-logs:/opt/logs"
+    environment:
+      - spring_datasource_url=jdbc:mysql://x.x.x.x3326/apolloconfigdb?characterEncoding=utf8
+      - spring_datasource_username=user
+      - spring_datasource_password=pwd
+
+  apollo-portal:
+    container_name: apollo-portal
+    image: apolloconfig/apollo-portal:2.3.0
+    restart: always
+    network_mode: "host"
+    depends_on:
+      - apollo-adminservice
+      - apollo-configservice
+    volumes:
+      - "./logs/portal-logs:/opt/logs"
+    environment:
+      - spring_datasource_url=jdbc:mysql://x.x.x.x:3326/apolloportaldb?characterEncoding=utf8
+      - spring_datasource_username=user
+      - spring_datasource_password=pwd
+      - apollo_portal_envs=dev
+      - dev_meta=http://hostip:8080
