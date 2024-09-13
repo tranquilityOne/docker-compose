@@ -1,0 +1,78 @@
+version: "3"
+
+services:
+  apollo-configservice:
+    container_name: apollo-configservice
+    image: apolloconfig/apollo-configservice:2.3.0
+    restart: always
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mysql8
+    volumes:
+      - "./logs/config-logs:/opt/logs"
+    environment:
+      - EUREKA_INSTANCE_IP_ADDRESS=${LOCAL_HOST_ADDRESS}
+      - EUREKA_INSTANCE_HOME_PAGE_URL=http://${LOCAL_HOST_ADDRESS}:8080
+      - spring_datasource_url=jdbc:mysql://${LOCAL_HOST_ADDRESS}:3306/apolloconfigdb?characterEncoding=utf8&allowPublicKeyRetrieval=true&useSSL=false
+      - spring_datasource_username=${MYSQL_USER_USERNAME}
+      - spring_datasource_password=${MYSQL_ROOT_PASSWORD}
+
+  apollo-adminservice:
+    container_name: apollo-adminservice
+    image: apolloconfig/apollo-adminservice:2.3.0
+    restart: always 
+    ports:
+      - "8090:8090"
+    depends_on:
+      - apollo-configservice
+      - mysql8
+    volumes:
+      - "./logs/admin-logs:/opt/logs"
+    environment:
+      - EUREKA_INSTANCE_IP_ADDRESS=${LOCAL_HOST_ADDRESS}
+      - spring_datasource_url=jdbc:mysql://${LOCAL_HOST_ADDRESS}:3306/apolloconfigdb?characterEncoding=utf8&allowPublicKeyRetrieval=true&useSSL=false
+      - spring_datasource_username=${MYSQL_USER_USERNAME}
+      - spring_datasource_password=${MYSQL_ROOT_PASSWORD}
+
+
+  apollo-portal:
+    container_name: apollo-portal
+    image: apolloconfig/apollo-portal:2.3.0
+    restart: always
+    ports:
+      - "8070:8070"
+    depends_on:
+      - apollo-adminservice
+      - apollo-configservice
+      - mysql8
+    volumes:
+      - "./logs/portal-logs:/opt/logs"
+    environment:
+      - EUREKA_INSTANCE_IP_ADDRESS=${LOCAL_HOST_ADDRESS}
+      - spring_datasource_url=jdbc:mysql://${LOCAL_HOST_ADDRESS}:3306/apolloportaldb?characterEncoding=utf8&allowPublicKeyRetrieval=true&useSSL=false
+      - spring_datasource_username=${MYSQL_USER_USERNAME}
+      - spring_datasource_password=${MYSQL_ROOT_PASSWORD}
+      - apollo_portal_envs=dev
+      - dev_meta=http://${LOCAL_HOST_ADDRESS}:8080  #configservice address
+
+  mysql8:
+    restart: always
+    privileged: true
+    image: mysql:8.0
+    container_name: mysql8
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --lower_case_table_names=1
+    mem_limit: 2g
+    cpus: 1
+    ports:
+      - 3306:3306
+    volumes:
+      - mysql8-data:/var/lib/mysql
+      - ./sql:/docker-entrypoint-initdb.d
+    environment:
+      TZ: "Asia/Shanghai"
+      MYSQL_ROOT_HOST: "%"
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD}"
+
+volumes:
+  mysql8-data:
